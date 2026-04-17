@@ -10,6 +10,7 @@ export default function ImageUploadFlow() {
   const [fixtureId, setFixtureId] = useState("");
   const [poleHeight, setPoleHeight] = useState("");
   const [selectedFileName, setSelectedFileName] = useState("No images selected");
+  const [previewImage, setPreviewImage] = useState(null);
 
   const formatSize = (bytes) => {
     return (bytes / 1024 / 1024).toFixed(2) + " MB";
@@ -156,11 +157,17 @@ export default function ImageUploadFlow() {
 
           return (
             <article className="upload-result-card" key={index}>
-              <img
-                className="upload-preview-image"
-                src={img.preview}
-                alt="preview"
-              />
+              <button
+                type="button"
+                className="upload-preview-trigger"
+                onClick={() => setPreviewImage(img.preview)}
+              >
+                <img
+                  className="upload-preview-image"
+                  src={img.preview}
+                  alt="uploaded fixture preview"
+                />
+              </button>
 
               <p className="upload-meta-line">
                 <strong>Original:</strong> {formatSize(img.originalSize)}
@@ -188,6 +195,29 @@ export default function ImageUploadFlow() {
         <p className="upload-helper-note">
           Complete all fields and upload at least one image to proceed.
         </p>
+      )}
+
+      {previewImage && (
+        <div
+          className="upload-preview-modal"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div
+            className="upload-preview-modal-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="upload-preview-close"
+              onClick={() => setPreviewImage(null)}
+            >
+              Close
+            </button>
+            <img src={previewImage} alt="full preview" className="upload-preview-large" />
+          </div>
+        </div>
       )}
     </section>
   );
