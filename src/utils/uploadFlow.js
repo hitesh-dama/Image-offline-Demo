@@ -1,9 +1,10 @@
 import { addToQueue } from "./queue";
-import { isOnline, isSlowNetwork } from "./network";
-import { compressImage } from "./compress";
+import { isOnline } from "./network";
+
+const UPLOAD_TIMEOUT_MS = 4000;
 
 // 🔹 Replace with real API
-const uploadImageAPI = async (file, id) => {
+const uploadImageAPI = async (file, id, signal) => {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("id", id);
@@ -11,7 +12,24 @@ const uploadImageAPI = async (file, id) => {
   await fetch("https://jsonplaceholder.typicode.com/posts", {
     method: "POST",
     body: formData,
+    signal,
   });
+};
+
+const uploadWithTimeout = async (file, id, timeoutMs = UPLOAD_TIMEOUT_MS) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    await uploadImageAPI(file, id, controller.signal);
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("timeout");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 };
 
 // 🔹 Replace with real API
@@ -29,26 +47,23 @@ export const handleSubmitFlow = async (images, details = null) => {
     return;
   }
 
-  const slow = isSlowNetwork();
   const imageIds = [];
+  let queuedCount = 0;
 
   for (let file of images) {
     const id = Date.now() + Math.random();
     imageIds.push(id);
 
-    // ✅ compress silently
-    const compressedFile = await compressImage(file);
-
-    if (slow) {
-      // 🐢 queue
+    try {
+      // Try immediate upload first; queue on timeout/failure.
+      await uploadWithTimeout(file, id);
+    } catch (err) {
       await addToQueue({
         id,
-        file: compressedFile,
+        file,
         status: "pending",
       });
-    } else {
-      // 🚀 upload immediately
-      await uploadImageAPI(compressedFile, id);
+      queuedCount += 1;
     }
   }
 
@@ -56,8 +71,8 @@ export const handleSubmitFlow = async (images, details = null) => {
   await submitFinalAPI({ imageIds, details });
 
   alert(
-    slow
-      ? "Submitted. Images will upload in background."
+    queuedCount > 0
+      ? `Submitted. ${queuedCount} image(s) queued and will retry in background.`
       : "Submitted successfully."
   );
 };

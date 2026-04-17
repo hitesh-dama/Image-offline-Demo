@@ -13,7 +13,7 @@ function App() {
   useEffect(() => {
     const interval = setInterval(() => {
       processQueue();
-    }, 5000);
+    }, 30000);
 
     return () => clearInterval(interval);
   }, []);

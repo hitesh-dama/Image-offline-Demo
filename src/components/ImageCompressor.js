@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import imageCompression from "browser-image-compression";
-import { handleSubmitFlow } from "../utils/uploadFlow";
+// import { handleSubmitFlow } from "../utils/uploadFlow";
 import "./ImageCompressor.css";
 
 // Helper: get dimensions

@@ -1,7 +1,8 @@
 import { getQueue, updateQueue } from "./queue";
-import { isStableNetwork } from "./network";
 
-const uploadImageAPI = async (file, id) => {
+const RETRY_TIMEOUT_MS = 8000;
+
+const uploadImageAPI = async (file, id, signal) => {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("id", id);
@@ -9,12 +10,29 @@ const uploadImageAPI = async (file, id) => {
   await fetch("https://jsonplaceholder.typicode.com/posts", {
     method: "POST",
     body: formData,
+    signal,
   });
 };
 
+const uploadWithTimeout = async (file, id, timeoutMs = RETRY_TIMEOUT_MS) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    await uploadImageAPI(file, id, controller.signal);
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("timeout");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 export const processQueue = async () => {
-  if (!isStableNetwork()) {
-    console.log("[Queue Sync] waiting for stable network");
+  if (!navigator.onLine) {
+    console.log("[Queue Sync] waiting for online status");
     return;
   }
 
@@ -27,7 +45,7 @@ export const processQueue = async () => {
 
   for (let item of queue) {
     try {
-      await uploadImageAPI(item.file, item.id);
+      await uploadWithTimeout(item.file, item.id);
     } catch (err) {
       remaining.push(item); // retry later
     }
