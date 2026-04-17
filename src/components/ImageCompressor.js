@@ -149,25 +149,10 @@ export default function ImageCompressor() {
 
       <div className="result-grid">
         {results.map((item, index) => {
-          let label = "";
-          let badgeClass = "";
-
-          if (item.quality >= 70) {
-            label = "Recommended";
-            badgeClass = "badge-recommended";
-          } else if (item.quality >= 50) {
-            label = "Balanced";
-            badgeClass = "badge-balanced";
-          } else {
-            label = "High Compression";
-            badgeClass = "badge-high";
-          }
-
           return (
             <article className="result-card" key={index}>
               <div className="result-head">
                 <h4>{item.quality}% Quality</h4>
-                <span className={`quality-badge ${badgeClass}`}>{label}</span>
               </div>
 
               <img className="result-image" src={item.url} alt="compressed" />

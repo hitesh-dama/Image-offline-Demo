@@ -138,6 +138,35 @@
   color: #324364;
 }
 
+.upload-status {
+  display: inline-block;
+  margin-top: 6px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.upload-status.status-ready {
+  background: #eaf0ff;
+  color: #2d4f9a;
+}
+
+.upload-status.status-processing {
+  background: #fff3d8;
+  color: #9a6400;
+}
+
+.upload-status.status-queued {
+  background: #ffe2e0;
+  color: #ad2c21;
+}
+
+.upload-status.status-uploaded {
+  background: #ddf6e8;
+  color: #137647;
+}
+
 .upload-submit-btn {
   margin-top: 18px;
   border: 0;
@@ -148,11 +177,51 @@
   font-size: 15px;
   background: linear-gradient(135deg, #1f6fd8 0%, #1f4cbf 100%);
   cursor: pointer;
+  transition: transform 0.12s ease, filter 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.upload-submit-btn:active {
+  transform: translateY(1px) scale(0.995);
 }
 
 .upload-submit-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.upload-submit-btn.is-submitting {
+  filter: saturate(0.75);
+  animation: submitPulse 1s ease-in-out infinite;
+}
+
+.submit-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: submitSpin 0.75s linear infinite;
+}
+
+@keyframes submitSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes submitPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(31, 79, 196, 0.35);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(31, 79, 196, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(31, 79, 196, 0);
+  }
 }
 
 .upload-helper-note {

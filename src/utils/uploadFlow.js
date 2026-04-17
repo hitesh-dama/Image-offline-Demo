@@ -1,7 +1,7 @@
 import { addToQueue } from "./queue";
 import { isOnline } from "./network";
 
-const UPLOAD_TIMEOUT_MS = 4000;
+const UPLOAD_TIMEOUT_MS = 2000;
 
 // 🔹 Replace with real API
 const uploadImageAPI = async (file, id, signal) => {
@@ -41,7 +41,9 @@ const submitFinalAPI = async (data) => {
   });
 };
 
-export const handleSubmitFlow = async (images, details = null) => {
+export const handleSubmitFlow = async (images, details = null, options = {}) => {
+  const { onStatusChange, onImageIdAssigned } = options;
+
   if (!isOnline()) {
     alert("No internet. Please try again.");
     return;
@@ -50,13 +52,17 @@ export const handleSubmitFlow = async (images, details = null) => {
   const imageIds = [];
   let queuedCount = 0;
 
-  for (let file of images) {
+  for (let index = 0; index < images.length; index++) {
+    const file = images[index];
     const id = Date.now() + Math.random();
     imageIds.push(id);
+    onImageIdAssigned?.(index, id);
+    onStatusChange?.(index, "processing");
 
     try {
       // Try immediate upload first; queue on timeout/failure.
       await uploadWithTimeout(file, id);
+      onStatusChange?.(index, "uploaded");
     } catch (err) {
       await addToQueue({
         id,
@@ -64,6 +70,7 @@ export const handleSubmitFlow = async (images, details = null) => {
         status: "pending",
       });
       queuedCount += 1;
+      onStatusChange?.(index, "queued");
     }
   }
 

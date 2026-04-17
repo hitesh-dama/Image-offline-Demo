@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { handleSubmitFlow } from "../utils/uploadFlow";
 import { compressImage } from "../utils/compress";
 import "./ImageUploadFlow.css";
@@ -11,6 +11,29 @@ export default function ImageUploadFlow() {
   const [poleHeight, setPoleHeight] = useState("");
   const [selectedFileName, setSelectedFileName] = useState("No images selected");
   const [previewImage, setPreviewImage] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const onQueueUploaded = (event) => {
+      const uploadedIds = event?.detail?.uploadedIds || [];
+      if (!uploadedIds.length) return;
+
+      setImages((prev) =>
+        prev.map((img) =>
+          uploadedIds.includes(img.uploadId)
+            ? {
+                ...img,
+                status: "uploaded",
+              }
+            : img
+        )
+      );
+    };
+
+    window.addEventListener("queue-images-uploaded", onQueueUploaded);
+    return () =>
+      window.removeEventListener("queue-images-uploaded", onQueueUploaded);
+  }, []);
 
   const formatSize = (bytes) => {
     return (bytes / 1024 / 1024).toFixed(2) + " MB";
@@ -35,6 +58,8 @@ export default function ImageUploadFlow() {
         preview: URL.createObjectURL(file),
         originalSize: file.size,
         compressedSize: compressed.size,
+        status: "ready",
+        uploadId: null,
       });
     }
 
@@ -52,12 +77,22 @@ export default function ImageUploadFlow() {
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+
     if (!isFormValid()) {
       alert("Please complete all fixture details and upload Ubicell images.");
       return;
     }
 
     const files = images.map((img) => img.compressedFile);
+
+    // Reset statuses before processing a new submission cycle.
+    setImages((prev) =>
+      prev.map((img) => ({
+        ...img,
+        status: "ready",
+      }))
+    );
 
     const fixtureDetails = {
       fixtureType,
@@ -66,7 +101,37 @@ export default function ImageUploadFlow() {
       poleHeight,
     };
 
-    await handleSubmitFlow(files, fixtureDetails);
+    try {
+      setIsSubmitting(true);
+      await handleSubmitFlow(files, fixtureDetails, {
+        onImageIdAssigned: (index, uploadId) => {
+          setImages((prev) =>
+            prev.map((img, i) =>
+              i === index
+                ? {
+                    ...img,
+                    uploadId,
+                  }
+                : img
+            )
+          );
+        },
+        onStatusChange: (index, status) => {
+          setImages((prev) =>
+            prev.map((img, i) =>
+              i === index
+                ? {
+                    ...img,
+                    status,
+                  }
+                : img
+            )
+          );
+        },
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -178,17 +243,30 @@ export default function ImageUploadFlow() {
               <p className="upload-meta-line">
                 <strong>Savings:</strong> {savings}%
               </p>
+              <p className={`upload-status status-${img.status || "ready"}`}>
+                {img.status === "processing" && "Processing"}
+                {img.status === "queued" && "Queued"}
+                {img.status === "uploaded" && "Uploaded"}
+                {img.status === "ready" && "Ready"}
+              </p>
             </article>
           );
         })}
       </div>
 
       <button
-        className="upload-submit-btn"
-        disabled={!isFormValid()}
+        className={`upload-submit-btn ${isSubmitting ? "is-submitting" : ""}`}
+        disabled={!isFormValid() || isSubmitting}
         onClick={handleSubmit}
       >
-        Submit Fixture & Ubicell Images
+        {isSubmitting ? (
+          <>
+            <span className="submit-spinner" aria-hidden="true" />
+            Submitting...
+          </>
+        ) : (
+          "Submit Fixture & Ubicell Images"
+        )}
       </button>
 
       {!isFormValid() && (

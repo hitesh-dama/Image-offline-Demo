@@ -42,16 +42,26 @@ export const processQueue = async () => {
 
   console.log(`[Queue Sync] processing ${queue.length} queued image(s)`);
   const remaining = [];
+  const uploadedIds = [];
 
   for (let item of queue) {
     try {
       await uploadWithTimeout(item.file, item.id);
+      uploadedIds.push(item.id);
     } catch (err) {
       remaining.push(item); // retry later
     }
   }
 
   await updateQueue(remaining);
+
+  if (uploadedIds.length) {
+    window.dispatchEvent(
+      new CustomEvent("queue-images-uploaded", {
+        detail: { uploadedIds },
+      })
+    );
+  }
 
   if (!remaining.length) {
     console.log("[Queue Sync] all queued images uploaded");
